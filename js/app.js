@@ -1,8 +1,8 @@
 // Экраны Tadabbur: «Тропа» (первый), «Аят по словам», «Занятие», «Итог».
 // Карта: docs/Карта Tadabbur/. Логика повтора: js/srs.js.
-import { answer, due, isKnown, pickNew, coverage, today } from "./srs.js?v=523d901e";
-import { load, save } from "./store.js?v=523d901e";
-import { googleButton, pushLater, pullOnStart, cloudUser } from "./cloud.js?v=523d901e";
+import { answer, due, isKnown, pickNew, coverage, today } from "./srs.js?v=87da8671";
+import { load, save } from "./store.js?v=87da8671";
+import { googleButton, pushLater, pullOnStart, cloudUser } from "./cloud.js?v=87da8671";
 
 const app = document.getElementById("app");
 const audioUrl = (a) => `https://audio.qurancdn.com/wbw/${a}.mp3`;
