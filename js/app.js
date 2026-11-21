@@ -1,8 +1,8 @@
 // Экраны Tadabbur: «Аят по словам» (первый), «Занятие», «Итог».
 // Карта: docs/Карта Tadabbur/. Логика повтора: js/srs.js.
-import { answer, due, isKnown, pickNew, coverage, today } from "./srs.js?v=667b0586";
-import { load, save } from "./store.js?v=667b0586";
-import { googleButton, pushLater, pullOnStart, cloudUser } from "./cloud.js?v=667b0586";
+import { answer, due, isKnown, pickNew, coverage, today } from "./srs.js?v=e8d58c5e";
+import { load, save } from "./store.js?v=e8d58c5e";
+import { googleButton, pushLater, pullOnStart, cloudUser } from "./cloud.js?v=e8d58c5e";
 
 const app = document.getElementById("app");
 const audioUrl = (a) => `https://audio.qurancdn.com/wbw/${a}.mp3`;
@@ -21,7 +21,7 @@ function h(tag, attrs, ...kids) {
   el.append(...kids.flat().filter((x) => x != null && x !== false));
   return el;
 }
-const show = (...nodes) => { app.replaceChildren(...nodes); window.scrollTo(0, 0); };
+const show = (...nodes) => { app.replaceChildren(...nodes.filter((n) => n != null)); window.scrollTo(0, 0); };
 const play = (a) => { try { new Audio(audioUrl(a)).play().catch(() => {}); } catch {} };
 const pct = (x) => Math.round(x * 100);
 const meter = (x) => h("div.meter", null, h("i", { style: `width:${pct(x)}%` }));

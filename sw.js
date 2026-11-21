@@ -1,6 +1,6 @@
 // Работа без интернета. Кэш с префиксом проекта: на xasi88.github.io общее хранилище.
 // Новая версия файлов: поменять VERSION.
-const VERSION = "tadabbur-0.1.0";
+const VERSION = "tadabbur-0.1.1";
 const FILES = [
   "./", "index.html", "manifest.webmanifest", "icons/icon.svg",
   "css/app.css", "css/tokens.css",
