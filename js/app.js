@@ -1,8 +1,10 @@
-// Экраны Tadabbur: «Тропа» (первый), «Аят по словам», «Занятие», «Итог».
+// Экраны Tadabbur: «Тропа» (первый), «Аят по словам», «Занятие», «Итог», «Настройки».
 // Карта: docs/Карта Tadabbur/. Логика повтора: js/srs.js.
-import { answer, due, isKnown, pickNew, coverage, today } from "./srs.js?v=67511142";
-import { load, save } from "./store.js?v=67511142";
-import { googleButton, pushLater, pullOnStart, cloudUser } from "./cloud.js?v=67511142";
+import { answer, due, isKnown, pickNew, coverage, today } from "./srs.js?v=d6384452";
+import { load, save } from "./store.js?v=d6384452";
+import { googleButton, pushLater, pullOnStart, cloudUser, signOut } from "./cloud.js?v=d6384452";
+import { icon } from "./icons.js?v=d6384452";
+import { APP_VERSION, CHANGELOG } from "./version.js?v=d6384452";
 
 const app = document.getElementById("app");
 const audioUrl = (a) => `https://audio.qurancdn.com/wbw/${a}.mp3`;
@@ -28,10 +30,21 @@ const meter = (x) => h("div.meter", null, h("i", { style: `width:${pct(x)}%` }))
 const glossOf = (k) => D.byKey.get(k).g;
 const keep = () => { save(P); pushLater(P); };
 
+// Объяснение слова: почему так переводится, и образ для памяти со значком.
+function explain(x) {
+  if (!x.e) return null;
+  const pic = h("div.pic");
+  pic.innerHTML = icon(x.i);
+  return h("div.explain", null,
+    h("p", null, h("b", null, "Почему так: "), x.e),
+    x.o ? h("div.obraz", null, x.i ? pic : null, h("p", null, h("b", null, "Образ: "), x.o)) : null);
+}
+
 async function start() {
-  const [w, f] = await Promise.all(["data/app/words.json", "data/app/fatiha.json"].map((u) => fetch(u).then((r) => r.json())));
+  const [w, f, ...ob] = await Promise.all(["words", "fatiha", "obyasnenie-1", "obyasnenie-2", "obyasnenie-3"].map((u) => fetch(`data/app/${u}.json`).then((r) => r.json())));
   const byKey = new Map();
   for (const x of [...f.ayat.flat(), ...w.words]) if (!byKey.has(x.k)) byKey.set(x.k, x);
+  for (const o of ob) for (const [k, x] of Object.entries(o.words)) if (byKey.has(k)) Object.assign(byKey.get(k), x);
   P = await pullOnStart(P); save(P);
   D = { top: w.words, ayat: f.ayat, byKey, counts: [...byKey].map(([k, x]) => [k, x.n]), total: w.meta.total };
   trailScreen();
@@ -63,13 +76,13 @@ function trailScreen() {
   }
   const cov = coverage(P, D.counts, D.total);
   show(
-    h("div.top", null, h("h1", null, "Аль-Фатиха"), h("span.pill", null, `${done} из 7`)),
+    h("div.top", null, h("h1", null, "Аль-Фатиха"), h("span.pill", null, `${done} из 7`),
+      h("button.icon-btn", { "aria-label": "Настройки", onclick: () => settingsScreen() }, "⚙")),
     h("p.hint", null, "Нажмите на аят, чтобы открыть его"),
     road,
     h("div.card.tilt", null,
       h("div.lbl", null, h("span", null, "Знакомые слова"), h("span", null, `${pct(cov)}% Корана`)),
       meter(cov)),
-    cloudCard(),
     h("div.bottom.stick", null,
       h("button.btn", { onclick: () => { P.aya = cur; keep(); lesson(); } }, done === 7 ? "Повторить и учить новые слова" : `Учить аят ${cur}`)));
 }
@@ -94,6 +107,7 @@ function ayaScreen(sel = null) {
         `button.w${isKnown(P, x.k) ? ".k" : plan.includes(x.k) || P.words[x.k] ? ".n" : ""}${sel === j ? ".sel" : ""}`,
         { onclick: () => pick(j), "aria-label": x.g }, x.ar))),
       h("div.gloss", { "aria-live": "polite" }, s ? [h("span.ar", null, s.ar), h("span", null, s.g)] : h("span", null, "Здесь появится перевод слова")),
+      s ? explain(s) : null,
       h("div.key", null,
         h("span", null, h("b", { style: "background:var(--lime)" }), "знаю"),
         h("span", null, h("b", { style: "background:var(--yellow)" }), "учу сегодня"),
@@ -107,18 +121,35 @@ function ayaScreen(sel = null) {
       h("button.btn", { onclick: () => lesson() }, label)));
 }
 
-// Вход не сразу: карточка появляется после первого занятия. Кнопка Google входит в одно нажатие.
+// Вход Google в настройках. Кнопка Google входит в одно нажатие.
 function cloudCard() {
-  if (!Object.keys(P.words).length) return null;
   const u = cloudUser();
-  if (u) return h("p.hint.center", null, `Прогресс сохранён в облаке${u.name ? ", " + u.name : ""}`);
+  if (u) return h("div.card", null,
+    h("div.lbl", null, h("span", null, "Прогресс в облаке")),
+    h("p.sub", { style: "margin:0 0 12px" }, `Вы вошли через Google${u.name ? ": " + u.name : ""}. Выученные слова сохраняются сами.`),
+    h("button.btn.light", { onclick: () => { signOut(); settingsScreen(); } }, "Выйти"));
   const slot = h("div.gbtn"), msg = h("p.sub.center", { "aria-live": "polite" });
   const card = h("div.card", null,
     h("div.lbl", null, h("span", null, "Сохраните прогресс")),
     h("p.sub", { style: "margin:0 0 12px" }, "Войдите через Google, и выученные слова не пропадут при смене телефона."),
     slot, msg);
-  googleButton(slot, () => P, (both) => { P = both; save(P); ayaScreen(); }, (t) => { msg.textContent = t; });
+  googleButton(slot, () => P, (both) => { P = both; save(P); settingsScreen(); }, (t) => { msg.textContent = t; });
   return card;
+}
+
+// Настройки: вход и облако, о переводе, версия и что нового.
+function settingsScreen() {
+  show(
+    h("div.top", null,
+      h("button.icon-btn", { "aria-label": "К тропе", onclick: () => trailScreen() }, "‹"),
+      h("h1", null, "Настройки")),
+    cloudCard(),
+    h("div.card", null,
+      h("div.lbl", null, h("span", null, "О переводе")),
+      h("p.sub", { style: "margin:0" }, "Перевод, объяснения и образы слов пока черновые. Их проверит знающий человек. Текст и звук слов: Quran.com.")),
+    h("div.card", null,
+      h("div.lbl", null, h("span", null, "Версия"), h("span", null, APP_VERSION)),
+      CHANGELOG.slice(0, 4).map((c) => h("div.log", null, h("b", null, `${c.v} · ${c.date}`), h("ul", null, c.items.map((t) => h("li", null, t)))))));
 }
 
 // Занятие: показ новых слов, потом вопросы по новым и пора повторить.
@@ -146,7 +177,8 @@ function learnCard(L, n) {
       h("div.ar.big", null, x.ar),
       h("p.tr", null, x.g),
       h("p.note", null, `В Коране ${x.n} раз`),
-      h("button.icon-btn.play", { "aria-label": "Послушать", onclick: () => play(x.a) }, "▶")),
+      h("button.icon-btn.play", { "aria-label": "Послушать", onclick: () => play(x.a) }, "▶"),
+      explain(x)),
     h("div.bottom", null,
       h("button.btn", { onclick: () => (n + 1 < L.fresh.length ? learnCard(L, n + 1) : quizCard(L)) }, "Дальше")));
 }
@@ -173,9 +205,12 @@ function quizCard(L) {
     if (!ok && !L.wrong.has(k)) { L.wrong.add(k); L.retry.push(k); }
     keep();
     play(x.a);
+    const ex = explain(x);
+    if (ex) hintBox.replaceChildren(ex);
     next.hidden = false;
     next.focus();
   };
+  const hintBox = h("div", { "aria-live": "polite" });
   const next = h("button.btn", { hidden: true, onclick: () => { L.step++; quizCard(L); } }, "Дальше");
   const btns = options(k).map((g) => h("button.opt", { onclick: (e) => pickOpt(g, e.currentTarget, btns) }, g));
   show(
@@ -185,6 +220,7 @@ function quizCard(L) {
       h("div.ar.big", null, x.ar),
       h("button.icon-btn.play", { "aria-label": "Послушать", onclick: () => play(x.a) }, "▶")),
     h("div.opts", null, btns),
+    hintBox,
     h("div.bottom", null, next));
 }
 

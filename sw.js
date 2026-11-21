@@ -1,12 +1,13 @@
 // Работа без интернета. Кэш с префиксом проекта: на xasi88.github.io общее хранилище.
 // Новая версия файлов: VERSION = "tadabbur-" + APP_VERSION из js/version.js (тест следит).
-const VERSION = "tadabbur-0.2.1";
+const VERSION = "tadabbur-0.3.0";
 const FILES = [
   "./", "index.html", "manifest.webmanifest", "icons/icon.svg",
   "css/app.css", "css/tokens.css",
-  "js/app.js", "js/srs.js", "js/store.js", "js/arabic.js", "js/version.js", "js/cloud.js", "js/merge.js",
+  "js/app.js", "js/srs.js", "js/store.js", "js/arabic.js", "js/version.js", "js/cloud.js", "js/merge.js", "js/icons.js",
   "fonts/manrope.woff2", "fonts/unbounded.woff2", "fonts/hafs.woff2",
   "data/app/words.json", "data/app/fatiha.json",
+  "data/app/obyasnenie-1.json", "data/app/obyasnenie-2.json", "data/app/obyasnenie-3.json",
 ];
 
 self.addEventListener("install", (e) => {
