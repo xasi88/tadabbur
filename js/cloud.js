@@ -2,8 +2,8 @@
 // Вход Google: кнопка Google Identity Services даёт пропуск Google, Firebase меняет его на свой (REST).
 // Без библиотеки Firebase: как в TanWin, прямые запросы (из России без VPN так надёжнее).
 // Документ: data (прогресс строкой JSON), at (время записи), v (версия). Правила: TanWin/firestore.rules.
-import { mergeProgress } from "./merge.js?v=d6384452";
-import { APP_VERSION } from "./version.js?v=d6384452";
+import { mergeProgress } from "./merge.js?v=6ff2aa58";
+import { APP_VERSION } from "./version.js?v=6ff2aa58";
 
 const KEY = "AIzaSyD5Vosjj70_ahkb48dYhfgfBMcvJugKx4E"; // открытый ключ веб-приложения Firebase: доступ решают правила базы
 const CLIENT = "107026046305-jf7qh4g5uhoinefdncfgg3r6flr4si0t.apps.googleusercontent.com";

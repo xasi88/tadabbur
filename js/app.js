@@ -1,15 +1,16 @@
-// Экраны Tadabbur: «Тропа» (первый), «Аят по словам», «Занятие», «Итог», «Настройки».
+// Экраны Tadabbur: «Суры» (первый), «Джуз Амма», «Тропа», «Аят по словам», «Занятие», «Итог», «Настройки».
 // Карта: docs/Карта Tadabbur/. Логика повтора: js/srs.js.
-import { answer, due, isKnown, pickNew, coverage, today } from "./srs.js?v=d6384452";
-import { load, save } from "./store.js?v=d6384452";
-import { googleButton, pushLater, pullOnStart, cloudUser, signOut } from "./cloud.js?v=d6384452";
-import { icon } from "./icons.js?v=d6384452";
-import { APP_VERSION, CHANGELOG } from "./version.js?v=d6384452";
+import { answer, due, isKnown, pickNew, coverage, today } from "./srs.js?v=6ff2aa58";
+import { load, save, fix } from "./store.js?v=6ff2aa58";
+import { googleButton, pushLater, pullOnStart, cloudUser, signOut } from "./cloud.js?v=6ff2aa58";
+import { icon } from "./icons.js?v=6ff2aa58";
+import { APP_VERSION, CHANGELOG } from "./version.js?v=6ff2aa58";
 
 const app = document.getElementById("app");
 const audioUrl = (a) => `https://audio.qurancdn.com/wbw/${a}.mp3`;
 let P = load();
-let D; // данные: top, ayat, byKey, counts, total
+let D; // данные: top, suras, byKey, counts, total; S: открытая сура, A: её аяты
+let S, A;
 
 // Маленький помощник: h("button.btn", {onclick}, "текст", ...)
 function h(tag, attrs, ...kids) {
@@ -41,57 +42,109 @@ function explain(x) {
 }
 
 async function start() {
-  const [w, f, ...ob] = await Promise.all(["words", "fatiha", "obyasnenie-1", "obyasnenie-2", "obyasnenie-3"].map((u) => fetch(`data/app/${u}.json`).then((r) => r.json())));
+  const [w, f, ...ob] = await Promise.all(["words", "suras", "obyasnenie-1", "obyasnenie-2", "obyasnenie-3", "obyasnenie-4"].map((u) => fetch(`data/app/${u}.json`).then((r) => r.json())));
   const byKey = new Map();
-  for (const x of [...f.ayat.flat(), ...w.words]) if (!byKey.has(x.k)) byKey.set(x.k, x);
+  for (const x of [...f.suras.flatMap((s) => (s.ayat || []).flat()), ...w.words]) if (!byKey.has(x.k)) byKey.set(x.k, x);
   for (const o of ob) for (const [k, x] of Object.entries(o.words)) if (byKey.has(k)) Object.assign(byKey.get(k), x);
-  P = await pullOnStart(P); save(P);
-  D = { top: w.words, ayat: f.ayat, byKey, counts: [...byKey].map(([k, x]) => [k, x.n]), total: w.meta.total };
-  trailScreen();
+  P = fix(await pullOnStart(P)); save(P);
+  D = { top: w.words, suras: f.suras, byKey, counts: [...byKey].map(([k, x]) => [k, x.n]), total: w.meta.total };
+  setSura(P.sura);
+  homeScreen();
+}
+
+// Открыть суру: её аяты и номер текущего аята из прогресса.
+function setSura(n) {
+  S = D.suras.find((s) => s.n === n && s.ayat) || D.suras[0];
+  A = S.ayat; P.sura = S.n; P.aya = P.pos[S.n] || 1;
+}
+const setAya = (i) => { P.aya = P.pos[S.n] = i; keep(); };
+const suraPart = (s) => { const ks = [...new Set(s.ayat.flat().map((x) => x.k))]; return ks.filter((k) => isKnown(P, k)).length / ks.length; };
+const openSura = (n, back) => { setSura(n); S.back = back; keep(); trailScreen(); };
+
+// Карточка суры: номер, имя, сколько аятов, доля знакомых слов.
+function suraBtn(s, back) {
+  const n = s.ayat ? s.ayat.length : s.len, part = s.ayat ? suraPart(s) : 0;
+  return h(`button.sura${s.ayat ? "" : ".soon"}${part === 1 ? ".done" : ""}`, {
+    disabled: !s.ayat, style: `--p:${pct(part)}%`, onclick: () => openSura(s.n, back),
+    "aria-label": `${s.n}. ${s.name}, ${s.ayat ? `понятно ${pct(part)}% слов` : "скоро"}`,
+  }, h("span.num", null, part === 1 ? "✓" : String(s.n)),
+  h("span.nm", null, h("b", null, s.name), h("small", null, `${n} ${ayaWord(n)}${s.ayat ? "" : ", скоро"}`)),
+  s.ayat ? h("span.pc", null, `${pct(part)}%`) : null);
+}
+const ayaWord = (n) => (n % 10 === 1 && n % 100 !== 11 ? "аят" : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? "аята" : "аятов");
+
+// Суры: первый экран. Аль-Фатиха отдельно, Джуз Амма открывает список сур.
+function homeScreen() {
+  const juz = D.suras.filter((s) => s.n >= 78), open = juz.filter((s) => s.ayat).length;
+  const cov = coverage(P, D.counts, D.total);
+  show(
+    h("div.top", null, h("h1", null, "Суры"),
+      h("button.icon-btn", { "aria-label": "Настройки", onclick: () => settingsScreen() }, "⚙")),
+    h("p.hint", null, "Выберите суру"),
+    suraBtn(D.suras[0], homeScreen),
+    h("button.sura.juz", { onclick: () => juzScreen(), "aria-label": `Джуз Амма, открыто ${open} из ${juz.length} сур` },
+      h("span.num", null, "30"), h("span.nm", null, h("b", null, "Джуз Амма"), h("small", null, `суры 78-114, открыто ${open} из ${juz.length}`)),
+      h("span.pc", null, "›")),
+    h("div.card.tilt", null,
+      h("div.lbl", null, h("span", null, "Знакомые слова"), h("span", null, `${pct(cov)}% Корана`)),
+      meter(cov)));
+}
+
+function juzScreen() {
+  show(
+    h("div.top", null,
+      h("button.icon-btn", { "aria-label": "К сурам", onclick: () => homeScreen() }, "‹"),
+      h("h1", null, "Джуз Амма")),
+    h("p.hint", null, "Пока открыты три последние суры. Остальные скоро."),
+    h("div.suras", null, D.suras.filter((s) => s.n >= 78).map((s) => suraBtn(s, juzScreen))));
+  // Открытые суры в конце длинного списка: сразу показать их.
+  app.querySelector(".sura:not(.soon)")?.scrollIntoView({ block: "center" });
 }
 
 // Ключи на сегодня для аята: незнакомые слова этого аята.
-const ayaKeys = (i) => [...new Set(D.ayat[i - 1].map((x) => x.k))];
+const ayaKeys = (i) => [...new Set(A[i - 1].map((x) => x.k))];
 
 // Доля знакомых слов аята и текущий аят: первый, где есть незнакомые слова.
 const ayaPart = (i) => { const ks = ayaKeys(i); return ks.filter((k) => isKnown(P, k)).length / ks.length; };
-const currentAya = () => { for (let i = 1; i <= 7; i++) if (ayaPart(i) < 1) return i; return 7; };
+const nums = () => A.map((_, i) => i + 1);
+const currentAya = () => nums().find((i) => ayaPart(i) < 1) || A.length;
 
-// Тропа: 7 аятов дорожкой сверху вниз. Кружок: номер, кольцо = доля знакомых слов.
+// Тропа: аяты суры дорожкой сверху вниз. Кружок: номер, кольцо = доля знакомых слов.
 const ROW = 108, DX = [0, 62, 0, -62];
 function trailScreen() {
-  const cur = currentAya(), done = [1, 2, 3, 4, 5, 6, 7].filter((i) => ayaPart(i) === 1).length;
+  const N = A.length, cur = currentAya(), done = nums().filter((i) => ayaPart(i) === 1).length;
   const x = (i) => DX[(i - 1) % 4];
-  const pts = [1, 2, 3, 4, 5, 6, 7].map((i) => `${300 + x(i)},${(i - 1) * ROW + 44}`).join(" ");
-  const svg = `<svg viewBox="0 0 600 ${6 * ROW + 88}" preserveAspectRatio="xMidYMin slice" aria-hidden="true"><polyline points="${pts}" /></svg>`;
-  const road = h("div.trail", { style: `height:${6 * ROW + 88}px` });
+  const pts = nums().map((i) => `${300 + x(i)},${(i - 1) * ROW + 44}`).join(" ");
+  const svg = `<svg viewBox="0 0 600 ${(N - 1) * ROW + 88}" preserveAspectRatio="xMidYMin slice" aria-hidden="true"><polyline points="${pts}" /></svg>`;
+  const road = h("div.trail", { style: `height:${(N - 1) * ROW + 88}px` });
   road.innerHTML = svg;
-  for (let i = 1; i <= 7; i++) {
+  for (let i = 1; i <= N; i++) {
     const part = ayaPart(i), st = part === 1 ? ".done" : i === cur ? ".cur" : "";
     road.append(h(`button.node${st}`, {
       style: `--p:${pct(part)}%;top:${(i - 1) * ROW}px;left:calc(50% + ${x(i)}px)`,
       "aria-label": `Аят ${i}, понятно ${pct(part)}% слов`,
-      onclick: () => { P.aya = i; keep(); ayaScreen(); },
+      onclick: () => { setAya(i); ayaScreen(); },
     }, h("span", null, part === 1 ? "✓" : String(i)), i === cur ? h("em", null, "сейчас") : h("small", null, `${pct(part)}%`)));
   }
   const cov = coverage(P, D.counts, D.total);
   show(
-    h("div.top", null, h("h1", null, "Аль-Фатиха"), h("span.pill", null, `${done} из 7`),
-      h("button.icon-btn", { "aria-label": "Настройки", onclick: () => settingsScreen() }, "⚙")),
+    h("div.top", null,
+      h("button.icon-btn", { "aria-label": "К сурам", onclick: () => (S.back || homeScreen)() }, "‹"),
+      h("h1", null, S.name), h("span.pill", null, `${done} из ${N}`)),
     h("p.hint", null, "Нажмите на аят, чтобы открыть его"),
     road,
     h("div.card.tilt", null,
       h("div.lbl", null, h("span", null, "Знакомые слова"), h("span", null, `${pct(cov)}% Корана`)),
       meter(cov)),
     h("div.bottom.stick", null,
-      h("button.btn", { onclick: () => { P.aya = cur; keep(); lesson(); } }, done === 7 ? "Повторить и учить новые слова" : `Учить аят ${cur}`)));
+      h("button.btn", { onclick: () => { setAya(cur); lesson(); } }, done === N ? "Повторить и учить новые слова" : `Учить аят ${cur}`)));
 }
 
 function ayaScreen(sel = null) {
-  const i = P.aya, words = D.ayat[i - 1];
+  const i = P.aya, words = A[i - 1], N = A.length;
   const plan = pickNew(P, ayaKeys(i), [], 5);
   const keys = ayaKeys(i), known = keys.filter((k) => isKnown(P, k)).length;
-  const go = (d) => { P.aya = Math.min(7, Math.max(1, i + d)); keep(); ayaScreen(); };
+  const go = (d) => { setAya(Math.min(N, Math.max(1, i + d))); ayaScreen(); };
   const pick = (j) => { play(words[j].a); ayaScreen(j); };
   const s = sel == null ? null : words[sel];
   const label = plan.length ? "Выучить слова аята" : due(P, today()).length ? "Повторить слова" : "Новые частые слова";
@@ -100,7 +153,7 @@ function ayaScreen(sel = null) {
       h("button.icon-btn", { "aria-label": "К тропе", onclick: () => trailScreen() }, "⌂"),
       h("button.icon-btn", { "aria-label": "Прошлый аят", disabled: i === 1, onclick: () => go(-1) }, "‹"),
       h("h1", null, `Аят ${i}`),
-      h("button.icon-btn", { "aria-label": "Следующий аят", disabled: i === 7, onclick: () => go(1) }, "›")),
+      h("button.icon-btn", { "aria-label": "Следующий аят", disabled: i === N, onclick: () => go(1) }, "›")),
     h("p.hint", null, "Нажмите на слово"),
     h("div.card", null,
       h("div.aya.ar", null, words.map((x, j) => h(
@@ -133,7 +186,7 @@ function cloudCard() {
     h("div.lbl", null, h("span", null, "Сохраните прогресс")),
     h("p.sub", { style: "margin:0 0 12px" }, "Войдите через Google, и выученные слова не пропадут при смене телефона."),
     slot, msg);
-  googleButton(slot, () => P, (both) => { P = both; save(P); settingsScreen(); }, (t) => { msg.textContent = t; });
+  googleButton(slot, () => P, (both) => { P = fix(both); setSura(P.sura); save(P); settingsScreen(); }, (t) => { msg.textContent = t; });
   return card;
 }
 
@@ -141,7 +194,7 @@ function cloudCard() {
 function settingsScreen() {
   show(
     h("div.top", null,
-      h("button.icon-btn", { "aria-label": "К тропе", onclick: () => trailScreen() }, "‹"),
+      h("button.icon-btn", { "aria-label": "К сурам", onclick: () => homeScreen() }, "‹"),
       h("h1", null, "Настройки")),
     cloudCard(),
     h("div.card", null,
