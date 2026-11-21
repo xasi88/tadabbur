@@ -1,8 +1,8 @@
 // Экраны Tadabbur: «Тропа» (первый), «Аят по словам», «Занятие», «Итог».
 // Карта: docs/Карта Tadabbur/. Логика повтора: js/srs.js.
-import { answer, due, isKnown, pickNew, coverage, today } from "./srs.js?v=87da8671";
-import { load, save } from "./store.js?v=87da8671";
-import { googleButton, pushLater, pullOnStart, cloudUser } from "./cloud.js?v=87da8671";
+import { answer, due, isKnown, pickNew, coverage, today } from "./srs.js?v=67511142";
+import { load, save } from "./store.js?v=67511142";
+import { googleButton, pushLater, pullOnStart, cloudUser } from "./cloud.js?v=67511142";
 
 const app = document.getElementById("app");
 const audioUrl = (a) => `https://audio.qurancdn.com/wbw/${a}.mp3`;
@@ -204,7 +204,10 @@ function doneScreen(L) {
 
 // Работа без интернета только на сайте: на своём компьютере кэш мешает проверять правки.
 if ("serviceWorker" in navigator && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
-  navigator.serviceWorker.register("sw.js").catch(() => {});
+  // Новая версия скачалась: сразу показать её, а не старую из памяти (жалоба автора 2026-11-21).
+  const had = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (had) location.reload(); });
+  navigator.serviceWorker.register("sw.js").then((r) => r.update()).catch(() => {});
 }
 
 start().catch(() => show(h("div.card", null, "Не удалось загрузить слова. Проверьте интернет и обновите страницу.")));
