@@ -1,0 +1,33 @@
+/* Переменные Tadabbur: значения из брендбука TanWin (docs/Брендбук Tadabbur.md).
+   Цвет, шрифт или размер меняется только после «да» автора и вместе с брендбуком. */
+@font-face { font-family: "Manrope"; src: url("../fonts/manrope.woff2") format("woff2"); font-weight: 400 800; font-display: swap; }
+@font-face { font-family: "Unbounded"; src: url("../fonts/unbounded.woff2") format("woff2"); font-weight: 400 900; font-display: swap; }
+@font-face { font-family: "TW Hafs"; src: url("../fonts/hafs.woff2") format("woff2"); font-display: swap; }
+
+:root {
+  --bg: #6b3ff0; --bg-2: #5a2fd6;
+  --card: #fff8f2; --card-2: #ffffff; --card-3: #f1ebff;
+  --ink: #130a30; --ink-2: #4a3f73; --ink-3: #6e5f9e;
+  --line: #d9cfee; --line-2: #c4b6e6;
+  --on-bg: #fff8f2; --on-bg-2: #ece4ff;
+  --edge: #130a30; --edge-sh: var(--edge);
+  --accent: #5b2fe0; --accent-2: #4a22c4; --accent-soft: #ece4ff; --accent-ink: #fff;
+  --lime: #c8f53a; --yellow: #fad12b; --pink: #ff5fae; --sky: #6fb7f6; --mint: #5fe0b0; --peach: #ffb38a;
+  --gold: #b07a12; --gold-2: #e8b440; --gold-soft: #fff1c9; --gold-text: #8a5b06;
+  --good: #16a765; --good-soft: #e3f9c8; --bad: #e0414d; --bad-soft: #ffe1ef;
+  --shadow: 4px 4px 0 #130a30; --shadow-lg: 6px 6px 0 #130a30;
+  --display: "Unbounded", "Arial Black", system-ui, sans-serif;
+  --body: "Manrope", "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --arabic: "TW Hafs", "Amiri Quran", serif;
+  --radius: 22px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1d1147; --bg-2: #2b1a66; --card: #f3ecfb; --card-2: #fbf8ff; --card-3: #e4daf8;
+    --on-bg-2: #d6c9ff; --shadow: 4px 4px 0 #07031a; --shadow-lg: 6px 6px 0 #07031a;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1d1147; --bg-2: #2b1a66; --card: #f3ecfb; --card-2: #fbf8ff; --card-3: #e4daf8;
+  --on-bg-2: #d6c9ff; --shadow: 4px 4px 0 #07031a; --shadow-lg: 6px 6px 0 #07031a;
+}
