@@ -1,8 +1,8 @@
-// Экраны Tadabbur: «Аят по словам» (первый), «Занятие», «Итог».
+// Экраны Tadabbur: «Тропа» (первый), «Аят по словам», «Занятие», «Итог».
 // Карта: docs/Карта Tadabbur/. Логика повтора: js/srs.js.
-import { answer, due, isKnown, pickNew, coverage, today } from "./srs.js?v=e8d58c5e";
-import { load, save } from "./store.js?v=e8d58c5e";
-import { googleButton, pushLater, pullOnStart, cloudUser } from "./cloud.js?v=e8d58c5e";
+import { answer, due, isKnown, pickNew, coverage, today } from "./srs.js?v=523d901e";
+import { load, save } from "./store.js?v=523d901e";
+import { googleButton, pushLater, pullOnStart, cloudUser } from "./cloud.js?v=523d901e";
 
 const app = document.getElementById("app");
 const audioUrl = (a) => `https://audio.qurancdn.com/wbw/${a}.mp3`;
@@ -34,11 +34,45 @@ async function start() {
   for (const x of [...f.ayat.flat(), ...w.words]) if (!byKey.has(x.k)) byKey.set(x.k, x);
   P = await pullOnStart(P); save(P);
   D = { top: w.words, ayat: f.ayat, byKey, counts: [...byKey].map(([k, x]) => [k, x.n]), total: w.meta.total };
-  ayaScreen();
+  trailScreen();
 }
 
 // Ключи на сегодня для аята: незнакомые слова этого аята.
 const ayaKeys = (i) => [...new Set(D.ayat[i - 1].map((x) => x.k))];
+
+// Доля знакомых слов аята и текущий аят: первый, где есть незнакомые слова.
+const ayaPart = (i) => { const ks = ayaKeys(i); return ks.filter((k) => isKnown(P, k)).length / ks.length; };
+const currentAya = () => { for (let i = 1; i <= 7; i++) if (ayaPart(i) < 1) return i; return 7; };
+
+// Тропа: 7 аятов дорожкой сверху вниз. Кружок: номер, кольцо = доля знакомых слов.
+const ROW = 108, DX = [0, 62, 0, -62];
+function trailScreen() {
+  const cur = currentAya(), done = [1, 2, 3, 4, 5, 6, 7].filter((i) => ayaPart(i) === 1).length;
+  const x = (i) => DX[(i - 1) % 4];
+  const pts = [1, 2, 3, 4, 5, 6, 7].map((i) => `${300 + x(i)},${(i - 1) * ROW + 44}`).join(" ");
+  const svg = `<svg viewBox="0 0 600 ${6 * ROW + 88}" preserveAspectRatio="xMidYMin slice" aria-hidden="true"><polyline points="${pts}" /></svg>`;
+  const road = h("div.trail", { style: `height:${6 * ROW + 88}px` });
+  road.innerHTML = svg;
+  for (let i = 1; i <= 7; i++) {
+    const part = ayaPart(i), st = part === 1 ? ".done" : i === cur ? ".cur" : "";
+    road.append(h(`button.node${st}`, {
+      style: `--p:${pct(part)}%;top:${(i - 1) * ROW}px;left:calc(50% + ${x(i)}px)`,
+      "aria-label": `Аят ${i}, понятно ${pct(part)}% слов`,
+      onclick: () => { P.aya = i; keep(); ayaScreen(); },
+    }, h("span", null, part === 1 ? "✓" : String(i)), i === cur ? h("em", null, "сейчас") : h("small", null, `${pct(part)}%`)));
+  }
+  const cov = coverage(P, D.counts, D.total);
+  show(
+    h("div.top", null, h("h1", null, "Аль-Фатиха"), h("span.pill", null, `${done} из 7`)),
+    h("p.hint", null, "Нажмите на аят, чтобы открыть его"),
+    road,
+    h("div.card.tilt", null,
+      h("div.lbl", null, h("span", null, "Знакомые слова"), h("span", null, `${pct(cov)}% Корана`)),
+      meter(cov)),
+    cloudCard(),
+    h("div.bottom.stick", null,
+      h("button.btn", { onclick: () => { P.aya = cur; keep(); lesson(); } }, done === 7 ? "Повторить и учить новые слова" : `Учить аят ${cur}`)));
+}
 
 function ayaScreen(sel = null) {
   const i = P.aya, words = D.ayat[i - 1];
@@ -50,8 +84,9 @@ function ayaScreen(sel = null) {
   const label = plan.length ? "Выучить слова аята" : due(P, today()).length ? "Повторить слова" : "Новые частые слова";
   show(
     h("div.top", null,
+      h("button.icon-btn", { "aria-label": "К тропе", onclick: () => trailScreen() }, "⌂"),
       h("button.icon-btn", { "aria-label": "Прошлый аят", disabled: i === 1, onclick: () => go(-1) }, "‹"),
-      h("h1", null, `Аль-Фатиха, аят ${i}`),
+      h("h1", null, `Аят ${i}`),
       h("button.icon-btn", { "aria-label": "Следующий аят", disabled: i === 7, onclick: () => go(1) }, "›")),
     h("p.hint", null, "Нажмите на слово"),
     h("div.card", null,
@@ -63,12 +98,11 @@ function ayaScreen(sel = null) {
         h("span", null, h("b", { style: "background:var(--lime)" }), "знаю"),
         h("span", null, h("b", { style: "background:var(--yellow)" }), "учу сегодня"),
         h("span", null, h("b", { style: "background:var(--card-2)" }), "позже")),
-      h("p.note", null, "Временный перевод на английском. Русский перевод появится после проверки.")),
+      h("p.note", null, "Черновой перевод. Его проверит знающий человек.")),
     h("div.card.tilt", null,
       h("div.lbl", null, h("span", null, "Вы понимаете"), h("span", null, `${known} из ${keys.length} слов`)),
       meter(keys.length ? known / keys.length : 0),
       h("p.sub", null, `Знакомые слова: ${pct(coverage(P, D.counts, D.total))}% всего текста Корана`)),
-    cloudCard(),
     h("div.bottom", null,
       h("button.btn", { onclick: () => lesson() }, label)));
 }
@@ -164,7 +198,8 @@ function doneScreen(L) {
       h("div.lbl", null, h("span", null, "Знакомые слова"), h("span", null, `${pct(coverage(P, D.counts, D.total))}% Корана`)),
       meter(coverage(P, D.counts, D.total)),
       h("p.sub", null, L.wrong.size ? "Слова с ошибкой придут на повтор сегодня. Одна ошибка ничего не решает." : "Слова придут на повтор через день.")),
-    h("div.bottom", null, h("button.btn", { onclick: () => ayaScreen() }, "К аяту")));
+    h("div.bottom", null, h("button.btn", { onclick: () => trailScreen() }, "К тропе"),
+      h("button.btn.light", { onclick: () => ayaScreen() }, `К аяту ${P.aya}`)));
 }
 
 // Работа без интернета только на сайте: на своём компьютере кэш мешает проверять правки.

@@ -29,6 +29,7 @@ h1 { font: 800 24px/1.2 var(--display); color: var(--on-bg); text-shadow: 3px 3p
 .btn.light { background: var(--card); }
 .btn:active, .icon-btn:active, .opt:active, .w:active { transform: translate(4px, 4px); box-shadow: none; }
 .bottom { margin-top: auto; display: flex; flex-direction: column; gap: 12px; }
+.stick { position: sticky; bottom: 16px; z-index: 2; }
 
 .ar { font-family: var(--arabic); direction: rtl; }
 .aya { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
@@ -71,6 +72,26 @@ h1 { font: 800 24px/1.2 var(--display); color: var(--on-bg); text-shadow: 3px 3p
 .opt:disabled { cursor: default; }
 .gbtn { min-height: 44px; display: flex; justify-content: center; }
 .result { font: 800 64px/1 var(--display); color: var(--on-bg); text-shadow: 4px 4px 0 var(--edge); text-align: center; }
+
+.trail { position: relative; width: 100%; max-width: 360px; margin: 0 auto; }
+.trail svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.trail polyline { fill: none; stroke: var(--on-bg); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 2 14; opacity: .7; }
+.node {
+  position: absolute; width: 88px; height: 88px; margin-left: -44px; border-radius: 50%; border: 3px solid var(--edge);
+  background: conic-gradient(var(--lime) var(--p), var(--card-3) 0); box-shadow: var(--shadow); padding: 9px;
+}
+.node span { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; border: 2.5px solid var(--edge); background: var(--card-2); font: 800 26px/1 var(--display); }
+.node small, .node em {
+  position: absolute; left: 50%; bottom: -14px; transform: translateX(-50%); border: 2px solid var(--edge); border-radius: 99px;
+  background: var(--card); padding: 1px 8px; font: 800 12px/1.4 var(--display); font-style: normal; white-space: nowrap;
+}
+.node.cur span { background: var(--yellow); }
+.node.cur em { background: var(--pink); }
+.node.cur { animation: bob 1.6s ease-in-out infinite; }
+.node.done span { background: var(--lime); }
+.node.done small { display: none; }
+.node:active { box-shadow: none; translate: 4px 4px; }
+@keyframes bob { 50% { translate: 0 -5px; } }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
